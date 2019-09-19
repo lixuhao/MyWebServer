@@ -1,0 +1,140 @@
+/*
+ *@Athor lixuhao
+ *@Email xxx@qq.com
+ */
+ 
+#pragma once
+#include "Thread.h"
+#include "CurrentThread.h"
+#include <memory>
+#include <errno.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <sys/prctl.h>//这个主要是涉及函数prctl
+#include <sys/types.h>
+#include <linux/unistd.h>
+#include <stdint.h>
+#include <assert.h>
+
+#include <iostream>
+using namespace std;
+
+
+namespace CurrentThread//要使用这个命名空间，所以写这儿，然后让CurrentThread里的需要的几个给他们初始化。
+{
+ __thread int t_cachedTid = 0;
+ __thread char t_tidString[32];
+ __thread int t_tidStringLength = 6;
+ __thread const char* t_threadName = "default";//="default"这个加了双引号，不是是c++11的用法，而是默认的线程名。
+}
+
+pid_t gettid()
+{
+//syscall(SyS_gettid)是一种间接的系统调用，是获取线程id的手段
+return static_cast<pid_t>(::syscall(SYS_gettid));//就是不理解域作用符是啥作用
+}
+
+void CurrentThread::cacheTid()
+{
+ if (t_cachedTid == 0)
+ {
+  t_cachedTid = gettid();//将获得线程id保存在t_cachedTid。
+  t_tidStringLength = snprintf(t_tidString, sizeof t_tidString, "%5d ", t_cachedTid);//将获得的tid的长度算出来。
+ }
+}
+
+
+//保留线程的数据
+struct ThreadData
+{
+typedef Thread::ThreadFunc ThreadFunc;//在Thread.h有typdef function<void()>ThreadFunc，所以一句是定义一个function<void()>类型别名 ThreadFunc。
+ThreadFunc func_;//定义function <void()>类型的类模板func_，就是function<void()> func_
+string name_;
+pid_t* tid_;
+CountDownLatch* latch_;
+
+ThreadData(const ThreadFunc &func, const string& name, pid_t *tid, CountDownLatch *latch): func_(func), name_(name),tid_(tid),latch_(latch)
+{}//这个类ThreadData的构造函数。
+
+
+//线程运行开始
+void runInThread()
+{
+*tid_ = CurrentThread::tid();//类ThreadData里的tid用CurrentThread里的tid来初始化，而这儿之所以能用“CurrentThread::”是因为头文件里有“#include "CurrentThread.h"，而CurrentThread.h里的tid是声明的。并没有初值，不过在CurrentThread.h文件里有这个初始化的tid，这儿明显是让Currentthread.cpp里的tid初始化了当前的这个tid。其实这个就涉及到了编译器的对头文件和源文件的工作原理。编译器在编译时是以C文件(或者cpp文件)为单位进行的,所以找的时候还是会找cpp文件里的tid。这个可以看自己的博客园收藏的”C语言中，头文件和源文件的关系（转）“
+tid_ = NULL;//这个是用完之后用NULL初始化，以免tid成为野指针
+latch_->countDown();//调用倒计时门闩的倒计时函数
+latch_ = NULL;
+CurrentThread::t_threadName = name_.empty() ? "Thread" :name_.c_str();//判断string类型的name是是否为空，为空就是函数名就是”Thread“，不为空就是将name里的内容转为c语言的字符串表示形式
+prctl(PR_SET_NAME, CurrentThread::t_threadName);//这个函数是为进程设置名字的，第一个参数PR_SET_NAME是设置进程名(线程名)的意思，第二个参数就是进程(线程)的名字
+
+func_();//调用func_(),这个是一个func_
+CurrentThread::t_threadName = "finished";
+}
+
+};
+
+
+//线程
+void *startThread(void* obj)
+{
+ThreadData* data = static_cast<ThreadData*>(obj); //将传入的对象转换为类ThreadData指针类型的，然后用data接收
+data->runInThread();//调用线程的运行函数
+delete data;//完了之后，释放掉这个空间
+return NULL;
+}
+
+//Thread的构造函数
+Thread::Thread(const ThreadFunc &func, const string &n)
+ :started_(false),
+  joined_(false),
+  pthreadId_(0),
+  tid_(0),
+  func_(func),
+  name_(n),latch_(1)//latch初始化为1.是倒计时门闩的count为1
+{
+setDefaultName();
+}
+
+Thread::~Thread()
+{
+if (started_ && !joined_)//这个是如果started_ 为true和joined不为true，started和bool在Thread.h文件里设为bool类型，started为true，由函数下面的函数start知道，strted为true,则说明线程是开始的了，而joined为false，由下面的join函数知:joined为false，则可以
+  pthread_detach(pthreadId_);//分离线程，参数是线程Id。可以用pthread_self()来获取。设置为deatch，则这个线程是可分离的线程分离线程，就是线程退出后，由系统自动来释放线程的内存空间，而pthread_join是等待线程退出，如果没退出，则一直阻塞等待.之所以把joined放在这儿当做判断条件。是因为不想线程调用Pthread_join，因为会阻塞。
+}
+
+void Thread::setDefaultName()////Thread的函数名
+{
+if (name_.empty())
+{
+  char buf[32];
+  snprintf(buf, sizeof buf, "Thread");
+  name_ = buf;
+}
+}
+
+void Thread::start()
+{
+assert(!started_);
+started_ = true;
+ThreadData* data = new ThreadData(func_, name_, &tid_, &latch_);
+if (pthread_create(&pthreadId_, NULL, &startThread, data))//创建的线程函数，成功返回0，失败返回错误码(错误码是非0值)
+{
+started_ = false;//创建线程失败，则执行这两句
+delete data;
+}
+else
+{
+latch_.wait();//创建线程成功，则加锁等待。
+assert(tid_ > 0);//这个是干嘛的，保证线程id大于0.这个一般写不出来
+}
+}
+
+int Thread::join()
+{
+assert(started_);
+assert(!joined_);
+joined_ = true;
+return pthread_join(pthreadId_, NULL);//新创建的线程默认是Joinable的，要想释放线程的空间，要调用pthread_join函数，阻塞等待，，等住了，就会线程空间，而上面的析构函数里的detach是把线程设置为可分离属性的，不需要调用pthread_join来阻塞等待。进而释放。
+}
+
+
+

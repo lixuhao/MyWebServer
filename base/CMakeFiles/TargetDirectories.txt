@@ -1,0 +1,6 @@
+/home/lixuhao/myprojects/mywebserver/base/CMakeFiles/rebuild_cache.dir
+/home/lixuhao/myprojects/mywebserver/base/CMakeFiles/libserver_base.dir
+/home/lixuhao/myprojects/mywebserver/base/CMakeFiles/edit_cache.dir
+/home/lixuhao/myprojects/mywebserver/base/tests/CMakeFiles/rebuild_cache.dir
+/home/lixuhao/myprojects/mywebserver/base/tests/CMakeFiles/LoggingTest.dir
+/home/lixuhao/myprojects/mywebserver/base/tests/CMakeFiles/edit_cache.dir

@@ -1,0 +1,12 @@
+/home/lixuhao/myprojects/mywebserver/NetWork-Lib/CMakeFiles/rebuild_cache.dir
+/home/lixuhao/myprojects/mywebserver/NetWork-Lib/CMakeFiles/WebServer.dir
+/home/lixuhao/myprojects/mywebserver/NetWork-Lib/CMakeFiles/edit_cache.dir
+/home/lixuhao/myprojects/mywebserver/NetWork-Lib/base/CMakeFiles/rebuild_cache.dir
+/home/lixuhao/myprojects/mywebserver/NetWork-Lib/base/CMakeFiles/libserver_base.dir
+/home/lixuhao/myprojects/mywebserver/NetWork-Lib/base/CMakeFiles/edit_cache.dir
+/home/lixuhao/myprojects/mywebserver/NetWork-Lib/base/tests/CMakeFiles/rebuild_cache.dir
+/home/lixuhao/myprojects/mywebserver/NetWork-Lib/base/tests/CMakeFiles/LoggingTest.dir
+/home/lixuhao/myprojects/mywebserver/NetWork-Lib/base/tests/CMakeFiles/edit_cache.dir
+/home/lixuhao/myprojects/mywebserver/NetWork-Lib/tests/CMakeFiles/rebuild_cache.dir
+/home/lixuhao/myprojects/mywebserver/NetWork-Lib/tests/CMakeFiles/HTTPClient.dir
+/home/lixuhao/myprojects/mywebserver/NetWork-Lib/tests/CMakeFiles/edit_cache.dir
